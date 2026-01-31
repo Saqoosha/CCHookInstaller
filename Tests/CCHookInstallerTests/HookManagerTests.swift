@@ -88,7 +88,8 @@ struct HookManagerTests {
             configuration: .userPromptSubmit(
                 appName: "TestApp",
                 hookIdentifiers: ["TestApp.app/"]
-            )
+            ),
+            notifierPath: "/TestApp.app/Contents/MacOS/notifier"
         )
 
         let settings: [String: Any] = [
@@ -96,7 +97,7 @@ struct HookManagerTests {
                 "UserPromptSubmit": [
                     [
                         "hooks": [
-                            ["command": "/path/to/TestApp.app/Contents/MacOS/notifier", "type": "command"]
+                            ["command": "/TestApp.app/Contents/MacOS/notifier", "type": "command"]
                         ]
                     ]
                 ]
@@ -202,7 +203,8 @@ struct HookManagerTests {
                 hookIdentifiers: ["TestApp.app/"],
                 matcher: "ExitPlanMode",
                 timeout: 10
-            )
+            ),
+            notifierPath: "/TestApp.app/Contents/MacOS/notifier"
         )
 
         let settings: [String: Any] = [
@@ -211,7 +213,7 @@ struct HookManagerTests {
                     [
                         "matcher": "ExitPlanMode",
                         "hooks": [
-                            ["command": "/path/to/TestApp.app/Contents/MacOS/notifier", "type": "command"]
+                            ["command": "/TestApp.app/Contents/MacOS/notifier", "type": "command"]
                         ],
                     ]
                 ]
@@ -445,7 +447,8 @@ struct HookManagerTests {
             configuration: .userPromptSubmit(
                 appName: "TestApp",
                 hookIdentifiers: ["TestApp.app/"]
-            )
+            ),
+            notifierPath: "/TestApp.app/Contents/MacOS/notifier"
         )
 
         // Settings with mixed types in array
@@ -456,7 +459,7 @@ struct HookManagerTests {
                     123,
                     [
                         "hooks": [
-                            ["command": "/path/to/TestApp.app/Contents/MacOS/notifier", "type": "command"]
+                            ["command": "/TestApp.app/Contents/MacOS/notifier", "type": "command"]
                         ]
                     ],
                 ]

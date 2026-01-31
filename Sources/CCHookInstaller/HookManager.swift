@@ -60,11 +60,14 @@ public final class HookManager: @unchecked Sendable {
         }
     }
 
-    /// Check if this app's hook is configured
+    /// Check if this app's hook is correctly configured
+    /// Returns true only if hook exists AND points to current app bundle
     /// Returns false if settings can't be read (file doesn't exist or errors)
     public func isHookConfigured() -> Bool {
         guard let settings = try? readSettings() else { return false }
-        return findHookIndex(in: settings) != nil
+        guard findHookIndex(in: settings) != nil else { return false }
+        // Also verify the path is correct
+        return !needsHookUpdate()
     }
 
     /// Check if hook needs update (cleanup required)
