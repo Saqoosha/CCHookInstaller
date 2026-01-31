@@ -160,8 +160,11 @@ let manager = HookManager(
 ```
 CCHookInstaller/
 ├── Package.swift
+├── README.md
+├── LICENSE
 ├── CLAUDE.md
-├── ARCHITECTURE.md
+├── docs/
+│   └── ARCHITECTURE.md
 ├── Sources/CCHookInstaller/
 │   ├── HookConfiguration.swift
 │   ├── HookManager.swift
