@@ -63,6 +63,62 @@ Error types for hook operations:
 - `unexpectedStructure` - settings.json has wrong structure
 - `notifierNotFound(appName:)` - App bundle or notifier not found
 
+### HookSetupUI
+
+UI coordinator that handles the entire hook setup flow on app launch:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                      HookSetupUI                         │
+│                   @MainActor enum                        │
+├─────────────────────────────────────────────────────────┤
+│ + checkOnLaunch(hookManager:messages:dontAskAgainKey:  │
+│                  onConfigurationChanged:)               │
+├─────────────────────────────────────────────────────────┤
+│ + showError(_:)                                         │
+│ + showSuccess(title:message:)                           │
+│ + showWarning(title:message:)                           │
+│ + showInstallPrompt(title:message:) -> InstallPromptResult│
+│ + showUpdatePrompt(title:message:) -> Bool              │
+│ + showRemovePrompt(title:message:) -> Bool              │
+└─────────────────────────────────────────────────────────┘
+```
+
+`checkOnLaunch` handles the complete flow:
+1. Check if Claude Code is installed
+2. Validate settings.json
+3. Prompt for update if path changed or duplicates exist
+4. Skip if already configured
+5. Respect "Don't Ask Again" preference
+6. Show install prompt for new installations
+
+### HookSetupMessages
+
+Customizable messages for the setup flow:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   HookSetupMessages                      │
+├─────────────────────────────────────────────────────────┤
+│ installPromptTitle: String                              │
+│ installPromptMessage: String                            │
+│ updatePromptTitle: String                               │
+│ updatePromptMessage: String                             │
+│ successTitle: String                                    │
+│ successMessage: String                                  │
+│ updateSuccessTitle: String                              │
+│ updateSuccessMessage: String                            │
+│ settingsWarningTitle: String                            │
+└─────────────────────────────────────────────────────────┘
+```
+
+### InstallPromptResult
+
+Enum representing user's response to install prompt:
+- `.install` - User chose to install
+- `.later` - User chose to defer
+- `.dontAskAgain` - User chose to never ask again
+
 ## Settings.json Structure
 
 Claude Code stores hooks in `~/.claude/settings.json`:
@@ -107,6 +163,9 @@ All public types conform to `Sendable` for Swift 6 compatibility:
 - `HookConfiguration: Sendable`
 - `HookManagerError: Sendable`
 - `HookManager: @unchecked Sendable`
+- `HookSetupMessages: Sendable`
+- `InstallPromptResult: Sendable`
+- `HookSetupUI: @MainActor enum` (UI operations on main thread)
 
 The `HookManager` class uses `@unchecked Sendable` because:
 1. File operations are synchronized via `NSFileCoordinator`
@@ -115,7 +174,7 @@ The `HookManager` class uses `@unchecked Sendable` because:
 
 ## Integration Pattern
 
-Each app creates a thin wrapper around the shared `HookManager`:
+Each app creates a thin wrapper around the shared `HookManager` and uses `HookSetupUI` for the setup flow:
 
 ```swift
 // In CCLangTutor
@@ -127,21 +186,37 @@ enum HookManager {
         )
     )
 
+    static let messages = HookSetupMessages(
+        installPromptMessage: "CCLangTutor can notify you...",
+        updatePromptMessage: "CCLangTutor's hook configuration needs updating.",
+        successMessage: "CCLangTutor will now receive notifications.",
+        updateSuccessMessage: "Hook has been updated."
+    )
+
     static func isClaudeCodeInstalled() -> Bool {
         shared.isClaudeCodeInstalled()
     }
     // ... other forwarding methods
 
-    // App-specific UI helpers stay in the app
     @MainActor
-    static func showInstallConfirmation() -> Bool { ... }
+    static func checkOnLaunch() {
+        HookSetupUI.checkOnLaunch(
+            hookManager: shared,
+            messages: messages,
+            dontAskAgainKey: "DontAskHookInstall"
+        ) {
+            // Post notification if needed
+            NotificationCenter.default.post(name: .hookConfigurationChanged, object: nil)
+        }
+    }
 }
 ```
 
 This pattern:
 - Maintains the same API as before (no changes to callers)
-- Keeps UI code in each app (not in shared library)
-- Allows app-specific configuration
+- Uses shared `HookSetupUI` for consistent UI flow
+- App provides only customized messages
+- Supports "Don't Ask Again" preference per app
 
 ## Testing
 
@@ -168,7 +243,9 @@ CCHookInstaller/
 ├── Sources/CCHookInstaller/
 │   ├── HookConfiguration.swift
 │   ├── HookManager.swift
-│   └── HookManagerError.swift
+│   ├── HookManagerError.swift
+│   ├── HookSetupMessages.swift
+│   └── HookSetupUI.swift
 └── Tests/CCHookInstallerTests/
     └── HookManagerTests.swift
 ```
